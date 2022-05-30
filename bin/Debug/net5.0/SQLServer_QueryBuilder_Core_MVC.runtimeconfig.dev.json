@@ -1,0 +1,9 @@
+{
+  "runtimeOptions": {
+    "additionalProbingPaths": [
+      "C:\\Users\\Vimal Gohil\\.dotnet\\store\\|arch|\\|tfm|",
+      "F:\\My Data\\My Projects\\5.Practice Projects\\SQLServer_QueryBuilder\\packages",
+      "C:\\Program Files\\dotnet\\sdk\\NuGetFallbackFolder"
+    ]
+  }
+}

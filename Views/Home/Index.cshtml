@@ -1,0 +1,437 @@
+﻿@{
+    ViewData["Title"] = "Home Page";
+}
+
+<div>
+    <div class="control-group">
+        <label class="control-label">SERVER DETAILS</label>
+    </div>
+
+    <div class="control-group">
+        <label class="control-label" for="txtServerName">Server Name: </label>
+        <div class="controls col-lg-5 col-md-10">
+            <input id="txtServerName" name="txtServerName" class="serverDetails" type="text" style="width:50%;" />
+        </div>
+    </div>
+
+    <div class="control-group" style="margin-top:10px;">
+        <label class="control-label">User Name: </label>
+        <div class="col-lg-5 col-md-10">
+            <input id="txtUserName" class="serverDetails" type="text" style="width:50%;" />
+        </div>
+    </div>
+
+    <div class="control-group" style="margin-top:10px;">
+        <label class="control-label">Password: </label>
+        <div class="col-lg-5 col-md-10">
+            <input id="txtPassword" class="serverDetails" type="text" style="width:50%;" />
+        </div>
+    </div>
+
+    <div class="control-group" style="margin-top:10px;">
+        <label class="control-label">Database Name: </label>
+        <div class="col-lg-5 col-md-10">
+            <input id="txtDatabaseName" class="serverDetails" type="text" style="width:50%;" />
+        </div>
+    </div>
+
+    <div id="dvConnString" class="control-group" style="margin-top:10px;">
+        <label class="control-label">Connection String: </label>
+        <div class="col-lg-12 col-md-12">
+            <input id="txtConnString" type="text" placeholder="Insert Connection String here..." style="width:90%;" readonly />
+        </div>
+    </div>
+
+    <div class="control-group" style="margin-top:10px;">
+        <div class="col-lg-5 col-md-10">
+            <input type="button" id="btnGetTables" value="Get Tables" title="Get Tables" />
+        </div>
+    </div>
+
+    <div id="divDatabaseTables" class="control-group" style="margin-top:10px;">
+
+    </div>
+
+    <div id="divColumns" class="control-group" style="margin-top:10px;">
+        <div>
+            <span id="spSelectAll">Select All Columns: </span><input id="selectAll" type="checkbox" />
+        </div>
+        <div id="dvColumns" style="margin-top:10px; margin-left:30px;">
+
+        </div>
+    </div>
+
+    <div id="divQueryType" class="control-group" style="margin-top:10px;">
+        <label class="control-label">Query Type:</label>
+        <br />
+        <div class="col-lg-10 col-md-10">
+            <select id="ddQueryType" style="width:30%;">
+                <option value="-1">-- SELECT --</option>
+                <option value="1">INSERT</option>
+                <option value="2">UPDATE</option>
+                <option value="3">DELETE</option>
+            </select>
+            <br />
+            <input type="button" id="btnGenerateQuery" value="Generate Query" title="Generate Query" style="margin-top:10px;" />
+        </div>
+    </div>
+
+    <div id="divQueryTextArea" class="control-group" style="margin-top:10px;">
+        <label class="control-label">Generate Query: </label>
+        <div class="col-lg-12 col-md-12">
+            <textarea id="queryTextArea" name="queryTextArea" rows="10" cols="30" style="width:90%; height:30%;"></textarea>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            $("#dvConnString").hide();
+            $("#divQueryType").hide();
+            $("#divQueryTextArea").hide();
+            $("#divColumns").hide();
+
+            let connectionString = '';
+            let columnList = [];
+            let selectedColumns = [];
+            let insertColumnList;
+            let updateColumnList;
+
+            function ShowHideGetDatabaseButton() {
+                let value = $("#txtConnString").val();
+
+                if (value == '' || value == null) {
+                    $("#btnGetTables").hide();
+                } else {
+                    $("#btnGetTables").show();
+                }
+            }
+
+            function ShowHideControls() {
+                let selectedValue = $("#ddDatabaseTables :selected").val();
+
+                if (selectedValue == '-- Select --') {
+                    $("#divQueryType").hide();
+                } else {
+                    $("#divQueryType").show();
+                }
+            }
+
+            function ChangeSelectAllCheckBox(checkbox) {
+                debugger;
+                var selectedCheckbox = checkbox;
+
+                let checkedCount = $("#dvColumns input:checked").length;
+
+                if (checkedCount === columnList.length) {
+                    $('#selectAll').prop('checked', true);
+                } else {
+                    $('#selectAll').prop('checked', false);
+                }
+            }
+
+            ShowHideGetDatabaseButton();
+
+            function ValidateServerDetails(ctrlId, ctrlValue) {
+                if (ctrlId === 'txtServerName' && ctrlValue === '') {
+                    alert("Server Name is required.");
+                    return;
+                } else if (ctrlId === 'txtUserName' && ctrlValue === '') {
+                    alert("User Name is required.");
+                    return;
+                } else if (ctrlId === 'txtPassword' && ctrlValue === '') {
+                    alert("Password is required.");
+                    return;
+                }
+                else if (ctrlId === 'txtDatabaseName' && ctrlValue === '') {
+                    alert("Database Name is required.");
+                    return;
+                }
+
+                return true;
+            }
+
+            $(".serverDetails").blur(function () {
+                let ctrl = this;
+                let ctrlId = $(this).prop('id');
+                let ctrlValue = $(this).val();
+                connectionString = '';
+
+                if (ctrlId === 'txtServerName' && ctrlValue === '') {
+                    alert("Server Name is required.");
+                    return;
+                } else if (ctrlId === 'txtUserName' && ctrlValue === '') {
+                    alert("User Name is required.");
+                    return;
+                } else if (ctrlId === 'txtPassword' && ctrlValue === '') {
+                    alert("Password is required.");
+                    return;
+                }
+                else if (ctrlId === 'txtDatabaseName' && ctrlValue === '') {
+                    alert("Database Name is required.");
+                    return;
+                }
+
+                if ($('#txtServerName').val() !== '' && $('#txtDatabaseName').val() !== '' && $('#txtUserName').val() !== '' && $('#txtPassword').val() !== '') {
+                    connectionString = `SERVER=${$('#txtServerName').val()}; Initial Catalog=${$('#txtDatabaseName').val()}; USER ID=${$('#txtUserName').val()}; PASSWORD=${$('#txtPassword').val()}`;
+
+                    $('#txtConnString').val(connectionString);
+                    $('#dvConnString').show();
+                    $('#btnGetTables').show();
+                } else {
+                    $('#txtConnString').val(connectionString);
+                    $('#dvConnString').hide();
+                    $('#btnGetTables').hide();
+                }
+            });
+
+            $('#txtConnString').blur(function () {
+                ShowHideGetDatabaseButton();
+            });
+
+            //$('#txtConnString').change(function () {
+            //    ShowHideGetDatabaseButton();
+            //});
+
+            $('#btnGetTables').click(function () {
+                $('#divDatabaseTables').html('');
+                $('#dvColumns').html('');
+                $('#spSelectAll').hide();
+                $('#selectAll').hide();
+                $('#selectAll').prop('checked', false);
+                $('#divQueryType').hide();
+                $('#ddQueryType').val(-1);
+                $('#btnGenerateQuery').hide();
+                $('#divQueryTextArea').hide();
+                $('#divQueryTextArea').val();
+
+                let connString = $('#txtConnString').val();
+
+                $.ajax({
+                    url: '/Home/GetTableList',
+                    data: { connString: connString },
+                    type: "POST",
+                    async: true,
+                    cache: false,
+                    success: function (data) {
+                        let tableList = data.toString().split(",");
+                        let tableCount = tableList.length;
+
+                        $('#divDatabaseTables').append($("<label class='control-label'>Tables:</label> <br />"));
+                        $('#divDatabaseTables').append($("<div id='dvInternalDatabaseTables' class='col-lg-5 col-md-10'> </div>"));
+
+                        //$('#dvInternalDatabaseTables').append($("<select id='ddDatabaseTables' onchange='ShowHideControls()'>"));
+                        $('#dvInternalDatabaseTables').append($("<select id='ddDatabaseTables'>"));
+
+                        $('#ddDatabaseTables').append($("<option />").val("-- Select --").text("-- Select --"));
+
+                        for (var i = 0; i < tableCount; i++) {
+                            $('#ddDatabaseTables').append($("<option />").val(tableList[i]).text(tableList[i]));
+                        }
+
+                        $("#dvInternalDatabaseTables").append($("</select>"));
+                        /*$("#divDatabaseTables").append($("</div>"));*/
+
+                        //$('#selectAll').show();
+                        //$('#divQueryType').show();
+                        //$('#btnGenerateQuery').show();
+                        //$('#divQueryTextArea').show();
+                    },
+                    error: function (data, status, jqXHR) {
+                        alert("Error while getting table list.");
+                    }
+                });
+            });
+
+            ////Table List Dropdown Change Event
+            $(document).on("change", '#ddDatabaseTables', function () {
+                $('#spSelectAll').show();
+                $('#selectAll').show();
+                $('#selectAll').prop('checked', false);
+                $('#divQueryTextArea').hide();
+
+                let selectedValue = $('#ddDatabaseTables :selected').val();
+
+                if (selectedValue == '-- Select --') {
+                    $('#divColumns').hide();
+                    $('#divQueryType').hide();
+                    $('#divQueryTextArea').hide();
+
+                    $('#ddQueryType').val(-1);
+                    $('#queryTextArea').val('');
+                    columnList.length = 0;
+                    selectedColumns.length = 0;
+                } else {
+                    $('#divQueryType').show();
+                    $('#divColumns').show();
+                    $('#btnGenerateQuery').show();
+                    /*$('#divQueryTextArea').show();*/
+
+                    $('#ddQueryType').val(-1);
+                    $('#queryTextArea').val('');
+                    columnList.length = 0;
+                    selectedColumns.length = 0;
+
+                    $.ajax({
+                        url: '/Home/GetTableColumnList',
+                        data: { tableName: selectedValue },
+                        type: "POST",
+                        async: true,
+                        cache: false,
+                        success: function (data) {
+                            $('#dvColumns').html('');
+
+                            let colList = data.toString().split(",");
+                            columnList = colList;
+                            let tableCount = colList.length;
+
+                            for (var i = 0; i < tableCount; i++) {
+                                var columnEl = "<div> <input id='" + colList[i] + "' type='checkbox' class='columnCheckboxChanged' />" + " " + colList[i] + "</div>";
+                                $("#dvColumns").append(columnEl);
+                            }
+                        },
+                        error: function (data, status, jqXHR) {
+                            alert("Error while getting table list.");
+                        }
+                    });
+                }
+            });
+
+            $(document).on("click", ".columnCheckboxChanged", function () {
+                var selectedCheckbox = this;
+
+                let checkedCount = $('#dvColumns input:checked').length;
+                if (checkedCount === columnList.length) {
+                    $('#selectAll').prop('checked', true);
+                } else {
+                    $('#selectAll').prop('checked', false);
+                }
+            });
+
+            /*$(document).on("change", "#selectAll input:checkbox", function () {*/
+            /*$(document).on("click", "input[id='#selectAll']", function () {*/
+            $(document).on("click", "#selectAll", function () {
+                $('#divQueryTextArea').hide();
+                $('#ddQueryType').val(-1);
+                $('#queryTextArea').val('');
+
+                let isChecked = $(this).is(':checked');
+                let tableCount = columnList.length;
+
+                if (isChecked) {
+                    for (var i = 0; i < tableCount; i++) {
+                        let columnId = columnList[i];
+                        $("#" + columnId).prop('checked', 'checked');
+
+                        //selectedColumns.push(columnId);
+                    }
+
+                    //insertColumnList = selectedColumns.join(", ");
+                } else {
+                    for (var i = 0; i < tableCount; i++) {
+                        let columnId = columnList[i];
+                        $("#" + columnId).prop('checked', false);
+                    }
+
+                    //selectedColumns.length = 0;
+
+                    //insertColumnList = '';
+                }
+            });
+
+            ///Not working
+            //$('#selectAll input:checkbox').change(function () {
+            //    let isChecked = $(this).is(':checked');
+
+            //    if (isChecked) {
+            //        let tableCount = columnList.length;
+
+            //        for (var i = 0; i < tableCount; i++) {
+            //            let columnId = columnList[i];
+            //            $('#' + columnId).prop('checked', 'checked');
+            //        }
+            //    }
+            //});
+
+            $(document).on("change", "#ddQueryType", function () {
+                //let selectedValue = $("#ddQueryType :selected").val();
+                //let selectedTableName = $("#ddDatabaseTables :selected").val();
+
+                //if (selectedValue == '-1') {
+                //    $("#divQueryTextArea").hide();
+                //} else {
+                //    $("#queryTextArea").val('');
+
+                //    $('#dvColumns input:checked').each(function () {
+                //        selectedColumns.push($(this).attr('id'));
+                //    });
+
+                //    if (selectedValue === '1') {
+                //        insertColumnList = selectedColumns.join(", ");
+                //        $("#queryTextArea").val("INSERT INTO " + selectedTableName + "(" + insertColumnList + ") VALUES( )");
+                //    } else if (selectedValue === '2') {
+                //        $("#queryTextArea").val("UPDATE " + selectedTableName + " SET ");
+                //    } else if (selectedValue === '3') {
+                //        $("#queryTextArea").val("DELETE FROM " + selectedTableName);
+                //    }
+
+                //    $("#divQueryTextArea").show();
+                //}
+            });
+
+            ////NOT WORKING Change and On
+            //$("#ddDatabaseTables").on("change", function () {
+            //    let selectedValue = $("#ddDatabaseTables :selected").val();
+
+            //    if (selectedValue == '-- Select --') {
+            //        $("#divQueryType").hide();
+            //    } else {
+            //        $("#divQueryType").show();
+            //    }
+            //});
+            //$("#ddDatabaseTables").change(function () {
+            //    let selectedValue = $("#ddDatabaseTables :selected").val();
+
+            //    if (selectedValue == '-- Select --') {
+            //        $("#divQueryType").hide();
+            //    } else {
+            //        $("#divQueryType").show();
+            //    }
+            //});
+
+            $('#btnGenerateQuery').click(function () {
+                $('#divQueryTextArea').show();
+                $('#queryTextArea').val('');
+                selectedColumns.length = 0;
+                insertColumnList = '';
+                updateColumnList = '';
+
+                let selectedQueryType = $("#ddQueryType :selected").val();
+                let selectedTableName = $("#ddDatabaseTables :selected").val();
+
+                if (selectedQueryType == '-1') {
+                    $("#divQueryTextArea").hide();
+                    $("#queryTextArea").val('');
+                    alert('Please select Query Type to generate query.');
+                } else {
+                    $('#dvColumns input:checked').each(function () {
+                        selectedColumns.push($(this).attr('id'));
+                    });
+
+                    if (selectedQueryType === '1') {
+                        insertColumnList = selectedColumns.join(", ");
+                        $("#queryTextArea").val("INSERT INTO " + selectedTableName + "(" + insertColumnList + ") VALUES ( )");
+                    } else if (selectedQueryType === '2') {
+                        updateColumnList = selectedColumns.join(" =  ,  ");
+                        $("#queryTextArea").val("UPDATE " + selectedTableName + " SET " + updateColumnList + "= WHERE ");
+                    } else if (selectedQueryType === '3') {
+                        $("#queryTextArea").val("DELETE FROM " + selectedTableName + " WHERE ");
+                    }
+
+                    $("#divQueryTextArea").show();
+                }
+            });
+        });
+    </script>
+}
